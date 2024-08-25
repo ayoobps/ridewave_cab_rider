@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "6927091013",
+    "project_id": "ridewave-cab-all",
+    "storage_bucket": "ridewave-cab-all.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6927091013:android:fb1c3b284f1e379e50ea2c",
+        "android_client_info": {
+          "package_name": "com.yallahsoft.ridewave_cab_rider"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "6927091013-39r5f1en2p80dpcj38321m02jtk25buf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yallahsoft.ridewave_cab_rider",
+            "certificate_hash": "6578f938be8f411da955faee71bab493d342ddc7"
+          }
+        },
+        {
+          "client_id": "6927091013-g77tp6p2cdqh650c9c07u305vp2vr5f6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaoRkkt-Gl0UCh4TKtQ4HC0kXm3dE3Mhw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "6927091013-g77tp6p2cdqh650c9c07u305vp2vr5f6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "6927091013-2p6rfp43jv0g4nqr42gkqm22jet4m9e4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.yallahsoft.ridewaveCabRider"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
