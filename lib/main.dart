@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         getPages: [
           GetPage(name: '/', page: () => SplashScreen()),
           GetPage(name: '/phone', page: () => LoginScreen()),
-          GetPage(name: '/otp', page: () => OtpVerificationScreen(verificationId: '')),
+          //GetPage(name: '/otp', page: () => OtpVerificationScreen(verificationId: '')),
           GetPage(name: '/register', page: () => Register()),
           GetPage(name: '/homescreen', page: () => HomeScreen()),
           GetPage(name: '/newtripalert', page: () => NewTripAlertScreen()),

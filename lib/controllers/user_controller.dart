@@ -19,7 +19,7 @@ class RegisterController extends GetxController {
         String fullName = "$firstName $lastName";
 
         // Create a document in the user_data collection with the user's details
-        await _firestore.collection('user_data').doc(uid).set({
+        await _firestore.collection('driver_data').doc(uid).set({
           'name': fullName,
           'email': email,
           'phone': phoneNumber,

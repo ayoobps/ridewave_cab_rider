@@ -28,7 +28,17 @@ class AuthController extends GetxController {
 
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: phoneNumber,
-        verificationCompleted: (phoneAuthCredential) {},
+        timeout: Duration(seconds: 120), // Extended timeout
+        verificationCompleted: (phoneAuthCredential) {
+          // Automatically verify the user if auto-retrieval succeeds
+          FirebaseAuth.instance.signInWithCredential(phoneAuthCredential).then((userCredential) {
+            // Navigate to the desired screen
+            Get.offAllNamed('/homescreen');
+          }).catchError((error) {
+            log(error.toString());
+            Get.snackbar('Auto verification failed', 'Please enter the OTP manually.');
+          });
+        },
         verificationFailed: (error) {
           log(error.toString());
           isLoading(false);
@@ -42,8 +52,10 @@ class AuthController extends GetxController {
         },
         codeAutoRetrievalTimeout: (verificationId) {
           log("Auto Retrieval timeout");
+          Get.snackbar('Auto Retrieval timeout', 'Please enter the OTP manually.');
         },
       );
+
     } else {
       Get.snackbar(
         'Invalid phone number format',

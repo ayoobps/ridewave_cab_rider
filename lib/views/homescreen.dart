@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -136,7 +137,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             ElevatedButton(
-              onPressed: () {},
+              onPressed: ()async {
+                try {
+                  // Sign out the user
+                  await FirebaseAuth.instance.signOut();
+
+                  // Navigate to the login screen or any other screen
+                  Get.offAllNamed('/login');
+                } catch (e) {
+                  // Handle errors (if any)
+                  Get.snackbar('Logout Failed', 'An error occurred while logging out.');
+                }
+              },
               style: ElevatedButton.styleFrom(
                 // primary: Colors.white,
                 // onPrimary: Colors.green,
