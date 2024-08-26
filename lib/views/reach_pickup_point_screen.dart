@@ -30,7 +30,8 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
           children: [
             Text(
               "Reach Pickup Point",
-              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              style:
+                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
             ),
             Spacer(),
             Text(
@@ -87,7 +88,8 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                       children: [
                         Text(
                           "TRIP ID",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         SizedBox(height: 4),
                         Text(
@@ -101,7 +103,8 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                         Divider(),
                         Text(
                           "PICKUP LOCATION",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         SizedBox(height: 4),
                         Row(
@@ -118,8 +121,9 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                         ),
                         Divider(),
                         Text(
-                          "Customer Details",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          "CUSTOMER DETAILS",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         SizedBox(height: 4),
                         Row(
@@ -175,18 +179,55 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                Get.offNamedUntil('/godroppoint',
-                                        (Route<dynamic> route) => route.isFirst);
-                              }
+                              showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: Text(
+                                        'Are you ready to start the trip?',
+                                        style: TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 20,
+                                        ),
+                                      ),
+                                      backgroundColor: Colors.green[50],
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: Text(
+                                            "No",
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                            onPressed: () {
+                                              if (_formKey.currentState!.validate()) {
+                                                Get.offNamedUntil('/godroppoint',
+                                                        (Route<dynamic> route) => route.isFirst);
+                                              }
+                                            },
+                                            child: Text(
+                                              "Yes",
+                                              style: TextStyle(
+                                                  color: Colors.green),
+                                            ))
+                                      ],
+                                    );
+                                  });
+                              // if (_formKey.currentState!.validate()) {
+                              //   Get.offNamedUntil('/godroppoint',
+                              //           (Route<dynamic> route) => route.isFirst);
+                              // }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              padding:
-                              EdgeInsets.symmetric(horizontal: 60, vertical: 12),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 60, vertical: 12),
                             ),
                             child: Text(
                               "START TRIP",
@@ -195,6 +236,11 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                           ),
                         ),
                         Divider(),
+                        Text(
+                          "DROP LOCATION",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
                         SizedBox(height: 4),
                         Row(
                           children: [
@@ -202,7 +248,7 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "G677+P62, Hotel Joys Palace, Thrissur, Kerala, India",
+                                "G6G6+PCG, Naikkanal, Thrissur, Kerala, India",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
@@ -232,7 +278,8 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                         Center(
                           child: Text(
                             "Distance - 2.6 km",
-                            style: TextStyle(color: Colors.black54, fontSize: 16),
+                            style:
+                                TextStyle(color: Colors.black54, fontSize: 16),
                           ),
                         ),
                       ],

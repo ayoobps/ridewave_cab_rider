@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:lottie/lottie.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -12,6 +13,40 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool isOnline = true;
+  String userName = "Loading...";
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('driver_data')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists) {
+          setState(() {
+            userName = userDoc['name']; // Assume the user's name is stored under the 'name' field
+          });
+        } else {
+          setState(() {
+            userName = "User";
+          });
+        }
+      }
+    } catch (e) {
+      setState(() {
+        userName = "User";
+      });
+      Get.snackbar('Error', 'Failed to fetch user data.');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           children: [
             Text(
-              "AYOOB PS",
+              userName.toUpperCase(),
               style:
               TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
             ),
@@ -133,21 +168,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(
-              height: 30.h,
+              height: 10.h,
             ),
 
             ElevatedButton(
-              onPressed: ()async {
-                try {
-                  // Sign out the user
-                  await FirebaseAuth.instance.signOut();
+              onPressed: () {
 
-                  // Navigate to the login screen or any other screen
-                  Get.offAllNamed('/login');
-                } catch (e) {
-                  // Handle errors (if any)
-                  Get.snackbar('Logout Failed', 'An error occurred while logging out.');
-                }
               },
               style: ElevatedButton.styleFrom(
                 // primary: Colors.white,
@@ -166,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 30),
+            SizedBox(height: 10),
             IconButton(
                 onPressed: () {
                   Get.offNamedUntil(
@@ -178,12 +204,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   size: 40,
                 )),
 
-            SizedBox(
-              height: 180.h,
+            Spacer(), // Pushes the Lottie animation to the bottom
+            Lottie.asset(
+              'assets/lotties/lottie1.json',
+              height: 200.h,
             ),
-
-            Lottie.asset('assets/lotties/lottie1.json'),
-            //Lottie.asset('assets/lotties/lottie2.json'),
           ],
         ),
       ),

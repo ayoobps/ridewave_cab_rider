@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class SettingsScreen extends StatefulWidget {
   @override
@@ -49,8 +52,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            ElevatedButton(
+              onPressed: ()async {
+                try {
+                  // Sign out the user
+                  await FirebaseAuth.instance.signOut();
+
+                  // Navigate to the login screen or any other screen
+                  Get.offAllNamed('/phone');
+                } catch (e) {
+                  // Handle errors (if any)
+                  Get.snackbar('Logout Failed', 'An error occurred while logging out.');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                // primary: Colors.white,
+                // onPrimary: Colors.green,
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: Colors.red),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: Text(
+                "LOGOUT",
+                style: TextStyle(
+                  color: Colors.redAccent,
+                ),
+              ),
+            ),
+          ],
+
+
 
         ),
+
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.green[50],
