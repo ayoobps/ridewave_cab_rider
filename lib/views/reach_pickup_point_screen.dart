@@ -9,6 +9,17 @@ class ReachPickupPointScreen extends StatefulWidget {
 
 class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
   bool isOnline = true;
+  bool isCashCollected = false; // Track if cash is collected
+  bool isPaymentOnline = false; // Track if the payment is online
+  double cashCollectedAmount = 104.06; // Track the amount of cash collected
+
+
+  void _updatePaymentStatus() {
+    setState(() {
+      isPaymentOnline = cashCollectedAmount == 0;
+    });
+  }
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _otpController = TextEditingController();
 
@@ -157,7 +168,7 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                           child: TextFormField(
                             controller: _otpController,
                             decoration: InputDecoration(
-                              hintText: 'Enter OTP Here',
+                              hintText: 'Enter PIN Here',
                               filled: true,
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
@@ -166,13 +177,14 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Please enter OTP';
-                              } else if (value.length != 6) {
-                                return 'OTP should be 6 digits';
+                                return 'Please enter PIN';
+                              } else if (value.length != 4) {
+                                return 'PIN should be 4 digits';
                               }
                               return null;
                             },
                             keyboardType: TextInputType.number,
+                            maxLength: 4,
                           ),
                         ),
                         SizedBox(height: 16),
@@ -216,10 +228,6 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                                       ],
                                     );
                                   });
-                              // if (_formKey.currentState!.validate()) {
-                              //   Get.offNamedUntil('/godroppoint',
-                              //           (Route<dynamic> route) => route.isFirst);
-                              // }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
@@ -259,15 +267,18 @@ class _ReachPickupPointScreenState extends State<ReachPickupPointScreen> {
                         SizedBox(height: 20),
                         Center(
                           child: Text(
-                            "PAYMENT TYPE : ONLINE",
+                            isPaymentOnline ? "PAYMENT TYPE : ONLINE" : "PAYMENT TYPE : CASH",
                             style: TextStyle(
-                                color: Colors.red, fontWeight: FontWeight.bold),
+                              color: isPaymentOnline ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                         SizedBox(height: 20),
                         Center(
                           child: Text(
-                            "₹104.06",
+                            "\u{20B9}${cashCollectedAmount}",
                             style: TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,

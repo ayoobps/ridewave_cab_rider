@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:get/get.dart';
-import 'package:lottie/lottie.dart';
 
 class ReachDropPointScreen extends StatefulWidget {
   @override
@@ -12,6 +10,21 @@ class ReachDropPointScreen extends StatefulWidget {
 class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
   bool isOnline = true;
   bool isCashCollected = false; // Track if cash is collected
+  bool isPaymentOnline = false; // Track if the payment is online
+  double cashCollectedAmount = 104.06; // Track the amount of cash collected
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize payment status based on initial cashCollectedAmount
+    _updatePaymentStatus();
+  }
+
+  void _updatePaymentStatus() {
+    setState(() {
+      isPaymentOnline = cashCollectedAmount == 0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +159,9 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                       Divider(),
                       Center(
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: isCashCollected
+                              ? null // Disable button if cash is already collected
+                              : () {
                             showDialog(
                               context: context,
                               builder: (context) {
@@ -156,6 +171,22 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                                     style: TextStyle(
                                       color: Colors.red,
                                       fontSize: 20,
+                                    ),
+                                  ),
+                                  content: SingleChildScrollView(
+                                    child: ListBody(
+                                      children: [
+                                        Center(
+                                          child: Text(
+                                            '\u{20B9}${cashCollectedAmount}',
+                                            style: TextStyle(
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 30,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   backgroundColor: Colors.green[50],
@@ -172,7 +203,9 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                                     ElevatedButton(
                                       onPressed: () {
                                         setState(() {
-                                          isCashCollected = true; // Update the state
+                                          isCashCollected = true;
+                                          cashCollectedAmount; // Set amount to zero after collection
+                                          _updatePaymentStatus(); // Update payment status
                                         });
                                         Navigator.of(context).pop();
                                       },
@@ -194,7 +227,7 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                             padding: EdgeInsets.symmetric(horizontal: 60, vertical: 12),
                           ),
                           child: Text(
-                            "COLLECT CASH : 0.00",
+                            "COLLECT CASH : \u{20B9}${cashCollectedAmount}",
                             style: TextStyle(color: Colors.white, fontSize: 20),
                           ),
                         ),
@@ -202,9 +235,12 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                       SizedBox(height: 20),
                       Center(
                         child: Text(
-                          "PAYMENT TYPE : ONLINE",
+                          isPaymentOnline ? "PAYMENT TYPE : ONLINE" : "PAYMENT TYPE : CASH",
                           style: TextStyle(
-                              color: Colors.red, fontWeight: FontWeight.bold),
+                            color: isPaymentOnline ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                       Divider(),
@@ -250,7 +286,7 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                               },
                             );
                           }
-                              : null, // Disable button if cash not collected
+                              : null, // Enable only if cash is collected
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isCashCollected ? Colors.green : Colors.grey,
                             shape: RoundedRectangleBorder(
@@ -268,11 +304,12 @@ class _ReachDropPointScreenState extends State<ReachDropPointScreen> {
                       SizedBox(height: 20),
                       Center(
                         child: Text(
-                          "₹104.06",
+                          "\u{20B9}${cashCollectedAmount}",
                           style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24),
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
                         ),
                       ),
                       SizedBox(height: 8),

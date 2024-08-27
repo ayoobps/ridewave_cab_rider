@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 import 'package:ridewave_cab_rider/controllers/auth_controller.dart';
 
-
 class LoginScreen extends StatelessWidget {
   final AuthController authController = Get.put(AuthController());
   final _formKey = GlobalKey<FormState>();
@@ -39,54 +38,55 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 20,),
-              TextFormField(
-                cursorColor: Colors.green,
-                controller: authController.phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  labelText: 'Mobile Number',
-                  hintText: 'Mobile Number',
-                  //labelText: 'Mobile Number',
-                  labelStyle: GoogleFonts.poppins(
-                    color: Colors.black54,
+              SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity, // Make the input field as wide as the container
+                child: TextFormField(
+                  cursorColor: Colors.green,
+                  controller: authController.phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    hintText: 'Mobile Number',
+                    labelText: 'Mobile Number',
+                    labelStyle: GoogleFonts.poppins(
+                      color: Colors.black54,
+                    ),
+                    prefixText: '+91   ',
+                    contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    enabledBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: Colors.white54),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: Colors.white54),
+                    ),
                   ),
-                  prefixText: '+91   ',
+                  style: GoogleFonts.poppins(
+                    color: Colors.black,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Phone field can't be empty";
+                    }
 
-                  contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                    borderSide: BorderSide(color: Colors.white54),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                    borderSide: BorderSide(color: Colors.white54),
-                  ),
+                    final pattern = r'^[6-9]\d{9}$';
+                    final regex = RegExp(pattern);
+
+                    if (!regex.hasMatch(value)) {
+                      return "Enter a valid 10-digit phone number starting with 6, 7, 8, or 9";
+                    }
+
+                    return null;
+                  },
                 ),
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return "Phone field can't be empty";
-                  }
-
-                  final pattern = r'^[6-9]\d{9}$';
-                  final regex = RegExp(pattern);
-
-                  if (!regex.hasMatch(value)) {
-                    return "Enter a valid 10-digit phone number starting with 6, 7, 8, or 9";
-                  }
-
-                  return null;
-                },
               ),
               const SizedBox(height: 24),
               Obx(() => authController.isLoading.value
