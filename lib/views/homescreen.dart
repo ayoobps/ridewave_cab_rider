@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:lottie/lottie.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:lottie/lottie.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -14,11 +17,27 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool isOnline = true;
   String userName = "Loading...";
+  double cashCollectedAmount = 104.06;
+  AudioPlayer audioPlayer = AudioPlayer();
+  Completer<GoogleMapController> _mapController = Completer();
+  Position? _currentPosition;
+  LatLng _initialPosition = LatLng(20.5937, 78.9629); // Default to India
+  Timer? _locationUpdateTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchUserName();
+    _getCurrentLocation();
+    _scheduleTripAlert();
+    _startLocationUpdates();
+  }
+
+  @override
+  void dispose() {
+    _locationUpdateTimer?.cancel();
+    audioPlayer.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchUserName() async {
@@ -32,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (userDoc.exists) {
           setState(() {
-            userName = userDoc['name']; // Assume the user's name is stored under the 'name' field
+            userName = userDoc['name'];
           });
         } else {
           setState(() {
@@ -48,6 +67,113 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      Get.snackbar('Error', 'Location services are disabled.');
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        Get.snackbar('Error', 'Location permissions are denied');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Get.snackbar('Error', 'Location permissions are permanently denied.');
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    setState(() {
+      _currentPosition = position;
+      _initialPosition = LatLng(position.latitude, position.longitude);
+    });
+
+    GoogleMapController mapController = await _mapController.future;
+    mapController.animateCamera(CameraUpdate.newLatLng(_initialPosition));
+  }
+
+  void _startLocationUpdates() {
+    _locationUpdateTimer = Timer.periodic(Duration(seconds: 10), (Timer t) {
+      _getCurrentLocation();
+    });
+  }
+
+  void _scheduleTripAlert() {
+    Future.delayed(Duration(seconds: 10), () {
+      if (isOnline) {
+        // Check if the user is online
+        _playAlertSound();
+        _showNewTripAlertDialog();
+      }
+    });
+  }
+
+
+  void _playAlertSound() async {
+    try {
+      print("Attempting to play sound...");
+      await audioPlayer.setVolume(1.0);
+      await audioPlayer.play(AssetSource('sounds/alert.mp3'));
+      print("Sound played successfully.");
+    } catch (e) {
+      print("Error playing sound: $e");
+      Get.snackbar('Error', 'Failed to play alert sound.');
+    }
+  }
+
+  void _showNewTripAlertDialog() {
+    Get.defaultDialog(
+      title: "New Trip Alert",
+      titleStyle: TextStyle(
+        fontSize: 22.sp,
+        fontWeight: FontWeight.bold,
+        color: Colors.green,
+      ),
+      content: Column(
+        children: [
+          Icon(
+            Icons.directions_car,
+            color: Colors.green,
+            size: 60.sp,
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            "You have a new trip request.",
+            style: TextStyle(
+              fontSize: 18.sp,
+              color: Colors.black54,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 20.h),
+          Text(
+            "\u{20B9}${cashCollectedAmount}",
+            style: TextStyle(
+                color: Colors.green, fontWeight: FontWeight.bold, fontSize: 35),
+          ),
+        ],
+      ),
+      onConfirm: () {
+        Get.offNamed('/newtripalert');
+      },
+      textConfirm: "OK",
+      confirmTextColor: Colors.white,
+      barrierDismissible: false,
+      buttonColor: Colors.green,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,11 +187,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               userName.toUpperCase(),
               style:
-              TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
             ),
             Spacer(),
             Text(
-              isOnline ? "Online" : "Offline", // Use ternary operator
+              isOnline ? "Online" : "Offline",
               style: TextStyle(color: Colors.black45),
             ),
             Switch(
@@ -82,138 +208,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 10.h,
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: _initialPosition,
+              zoom: 19.0,
             ),
-
-            CarouselSlider(
-              items: [
-                //1st Image of Slider
-                Container(
-                  margin: EdgeInsets.all(6.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    image: DecorationImage(
-                      image: NetworkImage("https://picsum.photos/250?image=15"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-                //2nd Image of Slider
-                Container(
-                  margin: EdgeInsets.all(6.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    image: DecorationImage(
-                      image: NetworkImage("https://picsum.photos/250?image=19"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-                //3rd Image of Slider
-                Container(
-                  margin: EdgeInsets.all(6.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    image: DecorationImage(
-                      image: NetworkImage("https://picsum.photos/250?image=16"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-                //4th Image of Slider
-                Container(
-                  margin: EdgeInsets.all(6.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    image: DecorationImage(
-                      image: NetworkImage("https://picsum.photos/250?image=17"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-                //5th Image of Slider
-                Container(
-                  margin: EdgeInsets.all(6.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    image: DecorationImage(
-                      image: NetworkImage("https://picsum.photos/250?image=18"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ],
-
-              //Slider Container properties
-              options: CarouselOptions(
-                height: 180.0,
-                enlargeCenterPage: true,
-                autoPlay: true,
-                aspectRatio: 16 / 9,
-                autoPlayCurve: Curves.slowMiddle,
-                scrollDirection: Axis.horizontal,
-                enableInfiniteScroll: true,
-                autoPlayAnimationDuration: Duration(seconds: 3),
-                viewportFraction: 0.8,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            onMapCreated: (GoogleMapController controller) {
+              _mapController.complete(controller);
+            },
+          ),
+          if (isOnline) // Show Lottie animation only if the user is online
+            Positioned(
+              top: 20,
+              left: 20,
+              right: 20,
+              child: Container(
+                width: double.infinity,
+                height: 100.h,
+                child: Lottie.asset('assets/lotties/lottie2.json'),
               ),
             ),
-
-            SizedBox(
-              height: 10.h,
-            ),
-
-            ElevatedButton(
-              onPressed: () {
-
-              },
-              style: ElevatedButton.styleFrom(
-                // primary: Colors.white,
-                // onPrimary: Colors.green,
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.green),
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: Text(
-                "WAITING FOR NEW TRIP",
-                style: TextStyle(
-                  color: Colors.green,
-                ),
-              ),
-            ),
-            SizedBox(height: 10),
-            IconButton(
-                onPressed: () {
-                  Get.offNamedUntil(
-                      '/newtripalert', (Route<dynamic> route) => route.isFirst);
-                },
-                icon: Icon(
-                  Icons.refresh,
-                  color: Colors.green,
-                  size: 40,
-                )),
-
-            Spacer(), // Pushes the Lottie animation to the bottom
-            Lottie.asset(
-              'assets/lotties/lottie1.json',
-              height: 200.h,
-            ),
-          ],
-        ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-
         backgroundColor: Colors.green[50],
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.black54,

@@ -114,6 +114,7 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: 16),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Checkbox(
                         value: _agreeToTerms,
@@ -188,27 +189,33 @@ class _RegisterState extends State<Register> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      style: TextStyle(color: Colors.black),
-      cursorColor: Colors.green,
-      controller: controller,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        hintText: labelText,
-        //labelText: labelText,
-        labelStyle: GoogleFonts.inter(
-          color: Colors.white54,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-          borderSide: BorderSide(color: Colors.white54),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: SizedBox(
+        width: 300,
+        child: TextFormField(
+          style: TextStyle(color: Colors.black),
+          cursorColor: Colors.green,
+          controller: controller,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          validator: validator,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            hintText: labelText,
+            //labelText: labelText,
+            labelStyle: GoogleFonts.inter(
+              color: Colors.white54,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: Colors.white54),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.blue),
+            ),
+          ),
         ),
       ),
     );
