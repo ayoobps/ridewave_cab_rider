@@ -39,7 +39,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          automaticallyImplyLeading: true,
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.green[50],
           elevation: 0,
           title: Row(
@@ -72,26 +72,8 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  SizedBox(height: 10.h),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(color: Colors.green),
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: Text(
-                      "NEW TRIP ALERT",
-                      style: TextStyle(
-                        color: Colors.green,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: 20.h),
+
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(

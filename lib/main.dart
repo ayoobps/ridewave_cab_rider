@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:ridewave_cab_rider/views/customer_data_page.dart';
 import 'package:ridewave_cab_rider/views/go_drop_point_screen.dart';
 import 'package:ridewave_cab_rider/views/go_pickup_point_screen.dart';
 import 'package:ridewave_cab_rider/views/homescreen.dart';
@@ -15,6 +16,7 @@ import 'package:ridewave_cab_rider/views/settings_screen.dart';
 import 'package:ridewave_cab_rider/views/splash_screen.dart';
 import 'package:ridewave_cab_rider/views/trip_completed_screen.dart';
 import 'package:ridewave_cab_rider/views/trip_history_screen.dart';
+
 
 
 void main() async {
@@ -51,7 +53,8 @@ class MyApp extends StatelessWidget {
           GetPage(name: '/reachdroppoint', page: () => ReachDropPointScreen()),
           GetPage(name: '/tripcompleted', page: () => TripCompletedScreen()),
           GetPage(name: '/triphistory', page: () => TripHistoryScreen()),
-          GetPage(name: '/settings', page: () => SettingsScreen()),
+          //GetPage(name: '/settings', page: () => SettingsScreen()),
+          GetPage(name: '/settings', page: () => CustomerDataPage()),
         ],
       ),
     );

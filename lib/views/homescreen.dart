@@ -15,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isOnline = true;
+  bool isOnline = false;
   String userName = "Loading...";
   double cashCollectedAmount = 104.06;
   AudioPlayer audioPlayer = AudioPlayer();
@@ -29,8 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _fetchUserName();
     _getCurrentLocation();
-    _scheduleTripAlert();
     _startLocationUpdates();
+    _listenToNewTripRequests();
+    _updateDriverStatus(); // Update driver status in Firestore
   }
 
   @override
@@ -101,38 +102,221 @@ class _HomeScreenState extends State<HomeScreen> {
 
     GoogleMapController mapController = await _mapController.future;
     mapController.animateCamera(CameraUpdate.newLatLng(_initialPosition));
+
+    // Update location in Firebase
+    _updateLocationInFirebase(position);
   }
+  //
+  // Future<void> _updateLocationInFirebase(Position position) async {
+  //   try {
+  //     User? user = FirebaseAuth.instance.currentUser;
+  //     if (user != null) {
+  //       await FirebaseFirestore.instance
+  //           .collection('driver_data')
+  //           .doc(user.uid)
+  //           .update({
+  //         'current_location': GeoPoint(position.latitude, position.longitude),
+  //         'last_updated': Timestamp.now(),
+  //         'status': isOnline ? 'online' : 'offline', // Update the driver status
+  //       });
+  //     }
+  //   } catch (e) {
+  //     print("Failed to update location in Firebase: $e");
+  //     Get.snackbar('Error', 'Failed to update location.');
+  //   }
+  // }
 
-  void _startLocationUpdates() {
-    _locationUpdateTimer = Timer.periodic(Duration(seconds: 10), (Timer t) {
-      _getCurrentLocation();
-    });
-  }
 
-  void _scheduleTripAlert() {
-    Future.delayed(Duration(seconds: 10), () {
-      if (isOnline) {
-        // Check if the user is online
-        _playAlertSound();
-        _showNewTripAlertDialog();
-      }
-    });
-  }
+  // Future<void> _updateLocationInFirebase(Position position) async {
+  //   try {
+  //     User? user = FirebaseAuth.instance.currentUser;
+  //     if (user != null) {
+  //       // Update the driver's location and status in the driver_data collection
+  //       await FirebaseFirestore.instance
+  //           .collection('driver_data')
+  //           .doc(user.uid)
+  //           .update({
+  //         'current_location': GeoPoint(position.latitude, position.longitude),
+  //         'last_updated': Timestamp.now(),
+  //         'status': isOnline ? 'online' : 'offline',
+  //       });
+  //
+  //       // Check if the current driver is selected in the trip-from-user collection
+  //       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  //           .collection('trip-from-user')
+  //           .where('driver_id', isEqualTo: user.uid)
+  //           .where('selected', isEqualTo: true)
+  //           .get();
+  //
+  //       if (querySnapshot.docs.isNotEmpty) {
+  //         var tripData = querySnapshot.docs.first.data();
+  //         _showTripData(tripData); // Show trip data if the current driver is selected
+  //       } else {
+  //         print("No active trips for the current driver.");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print("Failed to update location in Firebase: $e");
+  //     Get.snackbar('Error', 'Failed to update location.');
+  //   }
+  // }
 
+  // Future<void> _updateLocationInFirebase(Position position) async {
+  //   try {
+  //     User? user = FirebaseAuth.instance.currentUser;
+  //     if (user != null) {
+  //       // Update the driver's location and status in the driver_data collection
+  //       await FirebaseFirestore.instance
+  //           .collection('driver_data')
+  //           .doc(user.uid)
+  //           .update({
+  //         'current_location': GeoPoint(position.latitude, position.longitude),
+  //         'last_updated': Timestamp.now(),
+  //         'status': isOnline ? 'online' : 'offline',
+  //       });
+  //
+  //       // Check if the current driver is selected in the trip-from-user collection
+  //       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  //           .collection('trip-from-user')
+  //           .where('driver_id', isEqualTo: user.uid)
+  //           .where('selected', isEqualTo: true)
+  //           .get();
+  //
+  //       if (querySnapshot.docs.isNotEmpty) {
+  //         var tripData = querySnapshot.docs.first.data() as Map<String, dynamic>;
+  //         _showTripData(tripData); // Show trip data if the current driver is selected
+  //       } else {
+  //         print("No active trips for the current driver.");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print("Failed to update location in Firebase: $e");
+  //     Get.snackbar('Error', 'Failed to update location.');
+  //   }
+  // }
 
-  void _playAlertSound() async {
+  //*************
+  Future<void> _updateLocationInFirebase(Position position) async {
     try {
-      print("Attempting to play sound...");
-      await audioPlayer.setVolume(1.0);
-      await audioPlayer.play(AssetSource('sounds/alert.mp3'));
-      print("Sound played successfully.");
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Update the driver's location and status in the driver_data collection
+        await FirebaseFirestore.instance
+            .collection('driver_data')
+            .doc(user.uid)
+            .update({
+          'current_location': GeoPoint(position.latitude, position.longitude),
+          'last_updated': Timestamp.now(),
+          'status': isOnline ? 'online' : 'offline',
+        });
+
+        // Check if the current driver is selected in the trip-from-user collection
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('trip-from-user')
+            .where('driver_id', isEqualTo: user.uid)
+            .where('selected', isEqualTo: true)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          // Assuming there might be multiple trips but we only care about the current one
+          for (var doc in querySnapshot.docs) {
+            var tripData = doc.data() as Map<String, dynamic>?;
+
+            if (tripData != null) {
+              _showTripData(tripData); // Show trip data if the current driver is selected
+              break; // Show alert for the first matching trip and exit the loop
+            }
+          }
+        } else {
+          print("No active trips for the current driver.");
+        }
+      }
     } catch (e) {
-      print("Error playing sound: $e");
-      Get.snackbar('Error', 'Failed to play alert sound.');
+      print("Failed to update location in Firebase: $e");
+      Get.snackbar('Error', 'Failed to update location.');
     }
   }
 
-  void _showNewTripAlertDialog() {
+
+  // void _showTripData(Map<String, dynamic> tripData) {
+  //   Get.defaultDialog(
+  //     title: "Active Trip Details",
+  //     content: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text("Pickup: ${tripData['pickup-place']}"),
+  //         Text("Drop: ${tripData['drop-place']}"),
+  //         Text("Fare: ${tripData['fare']}"),
+  //       ],
+  //     ),
+  //     onConfirm: () {
+  //       Get.back();
+  //     },
+  //     textConfirm: "OK",
+  //     confirmTextColor: Colors.white,
+  //     buttonColor: Colors.green,
+  //   );
+  // }
+
+  // void _showTripData(Map<String, dynamic> tripData) {
+  //   Get.defaultDialog(
+  //     title: "Active Trip Details",
+  //     content: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text(
+  //           "Pickup Location:",
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         Text(tripData['pickup-place'] ?? "Not Available"),
+  //         SizedBox(height: 10.h),
+  //         Text(
+  //           "Drop Location:",
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         Text(tripData['drop-place'] ?? "Not Available"),
+  //         SizedBox(height: 10.h),
+  //         Text(
+  //           "Pickup Latitude:",
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         Text(tripData['pickup-lat']?.toString() ?? "Not Available"),
+  //         SizedBox(height: 10.h),
+  //         Text(
+  //           "Pickup Longitude:",
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         Text(tripData['pickup-long']?.toString() ?? "Not Available"),
+  //         SizedBox(height: 10.h),
+  //         Text(
+  //           "Drop Latitude:",
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         Text(tripData['drop-lat']?.toString() ?? "Not Available"),
+  //         SizedBox(height: 10.h),
+  //         Text(
+  //           "Drop Longitude:",
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         Text(tripData['drop-long']?.toString() ?? "Not Available"),
+  //         // Optionally, you can add more details such as fare or time
+  //       ],
+  //     ),
+  //     onConfirm: () {
+  //       Get.back(); // Close the dialog
+  //     },
+  //     textConfirm: "OK",
+  //     confirmTextColor: Colors.white,
+  //     buttonColor: Colors.green,
+  //   );
+  // }
+
+
+  //**********
+  void _showTripData(Map<String, dynamic> tripData) {
+    String pickupPlace = tripData['pickup-place'] ?? 'Unknown pickup location';
+    String dropPlace = tripData['drop-place'] ?? 'Unknown drop location';
+
     Get.defaultDialog(
       title: "New Trip Alert",
       titleStyle: TextStyle(
@@ -158,14 +342,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 20.h),
           Text(
-            "\u{20B9}${cashCollectedAmount}",
-            style: TextStyle(
-                color: Colors.green, fontWeight: FontWeight.bold, fontSize: 35),
+            "Pickup: $pickupPlace",
+            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            "Drop: $dropPlace",
+            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
       onConfirm: () {
-        Get.offNamed('/newtripalert');
+        audioPlayer.stop(); // Stop the alert sound when "OK" is clicked
+        Get.offNamed('/newtripalert', arguments: tripData);
       },
       textConfirm: "OK",
       confirmTextColor: Colors.white,
@@ -174,93 +365,242 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _onDriverStatusChange(bool isOnline) {
+    setState(() {
+      this.isOnline = isOnline;
+      _getCurrentLocation(); // Fetch current location and trigger the update
+    });
+  }
+
+
+  void _startLocationUpdates() {
+    _locationUpdateTimer = Timer.periodic(Duration(seconds: 10), (Timer t) {
+      _getCurrentLocation();
+    });
+  }
+
+  void _playAlertSound() async {
+    try {
+      await audioPlayer.setVolume(1.0);
+      await audioPlayer.setReleaseMode(ReleaseMode.loop); // Loop the sound
+      await audioPlayer.play(AssetSource('sounds/alert.mp3'));
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to play alert sound.');
+    }
+  }
+
+  void _showNewTripAlertDialog(Map<String, dynamic> tripData) {
+    Get.defaultDialog(
+      title: "New Trip Alert",
+      titleStyle: TextStyle(
+        fontSize: 22.sp,
+        fontWeight: FontWeight.bold,
+        color: Colors.green,
+      ),
+      content: Column(
+        children: [
+          Icon(
+            Icons.directions_car,
+            color: Colors.green,
+            size: 60.sp,
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            "You have a new trip request.",
+            style: TextStyle(
+              fontSize: 18.sp,
+              color: Colors.black54,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 20.h),
+          Text(
+            "Pickup: ${tripData['pickup-place']}",
+            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            "Drop: ${tripData['drop-place']}",
+            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      onConfirm: () {
+        audioPlayer.stop(); // Stop the alert sound when "OK" is clicked
+        Get.offNamed('/newtripalert', arguments: tripData);
+      },
+      textConfirm: "OK",
+      confirmTextColor: Colors.white,
+      barrierDismissible: false,
+      buttonColor: Colors.green,
+    );
+  }
+
+  void _listenToNewTripRequests() {
+    FirebaseFirestore.instance.collection('trip-request').snapshots().listen((snapshot) {
+      snapshot.docChanges.forEach((change) {
+        if (change.type == DocumentChangeType.added) {
+          var newTrip = change.doc.data();
+          if (newTrip != null && isOnline) {
+            _playAlertSound();
+            _showNewTripAlertDialog(newTrip);
+          }
+        }
+      });
+    });
+  }
+
+  Future<void> _refreshPage() async {
+    _fetchUserName();
+    _getCurrentLocation();
+    Get.snackbar('Refreshed', 'Page has been refreshed.');
+  }
+
+  void _updateDriverStatus() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('driver_data')
+          .doc(user.uid)
+          .update({
+        'status': isOnline ? 'online' : 'offline',
+      });
+    }
+  }
+
+  Widget _buildIconButton(IconData icon, VoidCallback onPressed, String tooltip) {
+    return FloatingActionButton(
+      backgroundColor: Colors.white,
+      onPressed: onPressed,
+      tooltip: tooltip,
+      child: Icon(
+        icon,
+        color: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.green[50],
-        elevation: 0,
-        title: Row(
+    // Initialize ScreenUtil for responsive design
+    return ScreenUtilInit(
+      designSize: Size(375, 812),
+      child:  Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.green[50],
+          elevation: 0,
+          title: Row(
+            children: [
+              Text(
+                userName.toUpperCase(),
+                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+              Spacer(),
+              Text(
+                isOnline ? "Online" : "Offline",
+                style: TextStyle(color: Colors.black45),
+              ),
+              // Switch(
+              //   value: isOnline,
+              //   onChanged: (value) {
+              //     setState(() {
+              //       isOnline = value;
+              //       _updateDriverStatus(); // Update driver status on switch change
+              //     });
+              //   },
+              //   activeColor: Colors.green,
+              //   inactiveTrackColor: Colors.red[100],
+              //   inactiveThumbColor: Colors.red,
+              // ),
+              Switch(
+                value: isOnline,
+                onChanged: (value) {
+                  _onDriverStatusChange(value);
+                },
+                activeColor: Colors.green,
+                inactiveTrackColor: Colors.red[100],
+                inactiveThumbColor: Colors.red,
+              ),
+
+            ],
+          ),
+        ),
+        body: Stack(
           children: [
-            Text(
-              userName.toUpperCase(),
-              style:
-                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-            ),
-            Spacer(),
-            Text(
-              isOnline ? "Online" : "Offline",
-              style: TextStyle(color: Colors.black45),
-            ),
-            Switch(
-              value: isOnline,
-              onChanged: (value) {
-                setState(() {
-                  isOnline = value;
-                });
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _initialPosition,
+                zoom: 19.0,
+              ),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController.complete(controller);
               },
-              activeColor: Colors.green,
-              inactiveTrackColor: Colors.red[100],
-              inactiveThumbColor: Colors.red,
+            ),
+            if (isOnline)
+              Positioned(
+                top: 20,
+                left: 20,
+                right: 20,
+                child: Container(
+                  width: double.infinity,
+                  height: 100.h,
+                  child: Lottie.asset('assets/lotties/lottie2.json'),
+                ),
+              ),
+            Positioned(
+              top: 20,
+              right: 20,
+              child: _buildIconButton(
+                Icons.refresh,
+                _refreshPage,
+                'Refresh Page',
+              ),
+            ),
+            Positioned(
+              bottom: 20,
+              right: 20,
+              child: _buildIconButton(
+                Icons.my_location,
+                _getCurrentLocation,
+                'Find My Location',
+              ),
             ),
           ],
         ),
-      ),
-      body: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _initialPosition,
-              zoom: 19.0,
-            ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            onMapCreated: (GoogleMapController controller) {
-              _mapController.complete(controller);
-            },
-          ),
-          if (isOnline) // Show Lottie animation only if the user is online
-            Positioned(
-              top: 20,
-              left: 20,
-              right: 20,
-              child: Container(
-                width: double.infinity,
-                height: 100.h,
-                child: Lottie.asset('assets/lotties/lottie2.json'),
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: Colors.green[50],
+          selectedItemColor: Colors.green,
+          unselectedItemColor: Colors.black54,
+          items: [
+            BottomNavigationBarItem(
+              icon: IconButton(
+                icon: Icon(Icons.home),
+                onPressed: () => Get.toNamed('/homescreen'),
               ),
+              label: 'Home',
             ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.green[50],
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.black54,
-        items: [
-          BottomNavigationBarItem(
-            icon: IconButton(
-              icon: Icon(Icons.home),
-              onPressed: () => Get.toNamed('/homescreen'),
+            BottomNavigationBarItem(
+              icon: IconButton(
+                icon: Icon(Icons.menu),
+                onPressed: () => Get.toNamed('/triphistory'),
+              ),
+              label: 'History',
             ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: IconButton(
-              icon: Icon(Icons.menu),
-              onPressed: () => Get.toNamed('/triphistory'),
+            BottomNavigationBarItem(
+              icon: IconButton(
+                icon: Icon(Icons.settings),
+                onPressed: () => Get.toNamed('/settings'),
+              ),
+              label: 'Settings',
             ),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: IconButton(
-              icon: Icon(Icons.settings),
-              onPressed: () => Get.toNamed('/settings'),
-            ),
-            label: 'Settings',
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

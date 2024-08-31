@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:get/get.dart';
-import 'package:lottie/lottie.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+
+
 
 class TripHistoryScreen extends StatefulWidget {
   @override
@@ -11,6 +12,36 @@ class TripHistoryScreen extends StatefulWidget {
 
 class _TripHistoryScreenState extends State<TripHistoryScreen> {
   bool isOnline = true;
+  bool isCashCollected = false; // Track if cash is collected
+  bool isPaymentOnline = false; // Track if the payment is online
+  double cashCollectedAmount = 104.06; // Track the amount of cash collected
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize payment status based on initial cashCollectedAmount
+    _updatePaymentStatus();
+  }
+
+  void _updatePaymentStatus() {
+    setState(() {
+      isPaymentOnline = cashCollectedAmount == 0;
+    });
+  }
+
+
+  void _toggleOnlineStatus(bool value) {
+    if (!value) {
+      // If the user tries to switch to offline, prevent the switch
+      Get.snackbar('Warning', 'Current trip must be completed to go offline.',
+          backgroundColor: Colors.red[100], colorText: Colors.red);
+      return; // Do nothing, the switch won't change
+    } else {
+      setState(() {
+        isOnline = value;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,32 +55,60 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           children: [
             Text(
               "Trip History",
-              style:
-              TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Spacer(),
             Text(
-              isOnline ? "Online" : "Offline", // Use ternary operator
+              isOnline ? "Online" : "Offline",
               style: TextStyle(color: Colors.black45),
             ),
             Switch(
               value: isOnline,
               onChanged: (value) {
-                setState(() {
-                  isOnline = value;
-                });
+                _toggleOnlineStatus(value);
               },
               activeColor: Colors.green,
               inactiveTrackColor: Colors.red[100],
               inactiveThumbColor: Colors.red,
             ),
+
           ],
         ),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            // Example: Carousel Slider for displaying trips
 
+            SizedBox(height: 20.h),
+            // Example: Static list of trip items
+            Expanded(
+              child: ListView.builder(
+                itemCount: 5,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: Icon(Icons.directions_car, color: Colors.green),
+                    title: Text(
+                      'Trip #${index + 1}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    subtitle: Text('Trip details go here...'),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16.sp),
+                    onTap: () {
+                      // Handle tap on trip item
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
