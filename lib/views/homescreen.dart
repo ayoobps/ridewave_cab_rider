@@ -106,94 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // Update location in Firebase
     _updateLocationInFirebase(position);
   }
-  //
-  // Future<void> _updateLocationInFirebase(Position position) async {
-  //   try {
-  //     User? user = FirebaseAuth.instance.currentUser;
-  //     if (user != null) {
-  //       await FirebaseFirestore.instance
-  //           .collection('driver_data')
-  //           .doc(user.uid)
-  //           .update({
-  //         'current_location': GeoPoint(position.latitude, position.longitude),
-  //         'last_updated': Timestamp.now(),
-  //         'status': isOnline ? 'online' : 'offline', // Update the driver status
-  //       });
-  //     }
-  //   } catch (e) {
-  //     print("Failed to update location in Firebase: $e");
-  //     Get.snackbar('Error', 'Failed to update location.');
-  //   }
-  // }
-
-
-  // Future<void> _updateLocationInFirebase(Position position) async {
-  //   try {
-  //     User? user = FirebaseAuth.instance.currentUser;
-  //     if (user != null) {
-  //       // Update the driver's location and status in the driver_data collection
-  //       await FirebaseFirestore.instance
-  //           .collection('driver_data')
-  //           .doc(user.uid)
-  //           .update({
-  //         'current_location': GeoPoint(position.latitude, position.longitude),
-  //         'last_updated': Timestamp.now(),
-  //         'status': isOnline ? 'online' : 'offline',
-  //       });
-  //
-  //       // Check if the current driver is selected in the trip-from-user collection
-  //       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-  //           .collection('trip-from-user')
-  //           .where('driver_id', isEqualTo: user.uid)
-  //           .where('selected', isEqualTo: true)
-  //           .get();
-  //
-  //       if (querySnapshot.docs.isNotEmpty) {
-  //         var tripData = querySnapshot.docs.first.data();
-  //         _showTripData(tripData); // Show trip data if the current driver is selected
-  //       } else {
-  //         print("No active trips for the current driver.");
-  //       }
-  //     }
-  //   } catch (e) {
-  //     print("Failed to update location in Firebase: $e");
-  //     Get.snackbar('Error', 'Failed to update location.');
-  //   }
-  // }
-
-  // Future<void> _updateLocationInFirebase(Position position) async {
-  //   try {
-  //     User? user = FirebaseAuth.instance.currentUser;
-  //     if (user != null) {
-  //       // Update the driver's location and status in the driver_data collection
-  //       await FirebaseFirestore.instance
-  //           .collection('driver_data')
-  //           .doc(user.uid)
-  //           .update({
-  //         'current_location': GeoPoint(position.latitude, position.longitude),
-  //         'last_updated': Timestamp.now(),
-  //         'status': isOnline ? 'online' : 'offline',
-  //       });
-  //
-  //       // Check if the current driver is selected in the trip-from-user collection
-  //       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-  //           .collection('trip-from-user')
-  //           .where('driver_id', isEqualTo: user.uid)
-  //           .where('selected', isEqualTo: true)
-  //           .get();
-  //
-  //       if (querySnapshot.docs.isNotEmpty) {
-  //         var tripData = querySnapshot.docs.first.data() as Map<String, dynamic>;
-  //         _showTripData(tripData); // Show trip data if the current driver is selected
-  //       } else {
-  //         print("No active trips for the current driver.");
-  //       }
-  //     }
-  //   } catch (e) {
-  //     print("Failed to update location in Firebase: $e");
-  //     Get.snackbar('Error', 'Failed to update location.');
-  //   }
-  // }
 
   //*************
   Future<void> _updateLocationInFirebase(Position position) async {
@@ -238,84 +150,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  // void _showTripData(Map<String, dynamic> tripData) {
-  //   Get.defaultDialog(
-  //     title: "Active Trip Details",
-  //     content: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Text("Pickup: ${tripData['pickup-place']}"),
-  //         Text("Drop: ${tripData['drop-place']}"),
-  //         Text("Fare: ${tripData['fare']}"),
-  //       ],
-  //     ),
-  //     onConfirm: () {
-  //       Get.back();
-  //     },
-  //     textConfirm: "OK",
-  //     confirmTextColor: Colors.white,
-  //     buttonColor: Colors.green,
-  //   );
-  // }
-
-  // void _showTripData(Map<String, dynamic> tripData) {
-  //   Get.defaultDialog(
-  //     title: "Active Trip Details",
-  //     content: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Text(
-  //           "Pickup Location:",
-  //           style: TextStyle(fontWeight: FontWeight.bold),
-  //         ),
-  //         Text(tripData['pickup-place'] ?? "Not Available"),
-  //         SizedBox(height: 10.h),
-  //         Text(
-  //           "Drop Location:",
-  //           style: TextStyle(fontWeight: FontWeight.bold),
-  //         ),
-  //         Text(tripData['drop-place'] ?? "Not Available"),
-  //         SizedBox(height: 10.h),
-  //         Text(
-  //           "Pickup Latitude:",
-  //           style: TextStyle(fontWeight: FontWeight.bold),
-  //         ),
-  //         Text(tripData['pickup-lat']?.toString() ?? "Not Available"),
-  //         SizedBox(height: 10.h),
-  //         Text(
-  //           "Pickup Longitude:",
-  //           style: TextStyle(fontWeight: FontWeight.bold),
-  //         ),
-  //         Text(tripData['pickup-long']?.toString() ?? "Not Available"),
-  //         SizedBox(height: 10.h),
-  //         Text(
-  //           "Drop Latitude:",
-  //           style: TextStyle(fontWeight: FontWeight.bold),
-  //         ),
-  //         Text(tripData['drop-lat']?.toString() ?? "Not Available"),
-  //         SizedBox(height: 10.h),
-  //         Text(
-  //           "Drop Longitude:",
-  //           style: TextStyle(fontWeight: FontWeight.bold),
-  //         ),
-  //         Text(tripData['drop-long']?.toString() ?? "Not Available"),
-  //         // Optionally, you can add more details such as fare or time
-  //       ],
-  //     ),
-  //     onConfirm: () {
-  //       Get.back(); // Close the dialog
-  //     },
-  //     textConfirm: "OK",
-  //     confirmTextColor: Colors.white,
-  //     buttonColor: Colors.green,
-  //   );
-  // }
-
-
-  //**********
+  //*******
   void _showTripData(Map<String, dynamic> tripData) {
-    String pickupPlace = tripData['pickup-place'] ?? 'Unknown pickup location';
-    String dropPlace = tripData['drop-place'] ?? 'Unknown drop location';
+    String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
+    String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
 
     Get.defaultDialog(
       title: "New Trip Alert",
@@ -364,6 +202,8 @@ class _HomeScreenState extends State<HomeScreen> {
       buttonColor: Colors.green,
     );
   }
+
+
 
   void _onDriverStatusChange(bool isOnline) {
     setState(() {
@@ -415,13 +255,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 20.h),
           Text(
-            "Pickup: ${tripData['pickup-place']}",
+            "Pickup: ${tripData['pickup_place']}",
             style: TextStyle(fontSize: 16.sp, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 10.h),
           Text(
-            "Drop: ${tripData['drop-place']}",
+            "Drop: ${tripData['drop_place']}",
             style: TextStyle(fontSize: 16.sp, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
@@ -438,19 +278,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
+  //******
   void _listenToNewTripRequests() {
-    FirebaseFirestore.instance.collection('trip-request').snapshots().listen((snapshot) {
+    FirebaseFirestore.instance.collection('trips-from-user').snapshots().listen((snapshot) {
       snapshot.docChanges.forEach((change) {
         if (change.type == DocumentChangeType.added) {
-          var newTrip = change.doc.data();
-          if (newTrip != null && isOnline) {
-            _playAlertSound();
-            _showNewTripAlertDialog(newTrip);
+          var newTrip = change.doc.data() as Map<String, dynamic>?;
+          print('New Trip Data: $newTrip'); // Log the new trip data
+
+          if (newTrip != null) {
+            User? user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              if (newTrip['driver_id'] == user.uid && newTrip['selected'] == true) {
+                _playAlertSound();
+                _showTripData(newTrip);
+              }
+            }
           }
         }
       });
     });
   }
+
 
   Future<void> _refreshPage() async {
     _fetchUserName();
@@ -504,18 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 isOnline ? "Online" : "Offline",
                 style: TextStyle(color: Colors.black45),
               ),
-              // Switch(
-              //   value: isOnline,
-              //   onChanged: (value) {
-              //     setState(() {
-              //       isOnline = value;
-              //       _updateDriverStatus(); // Update driver status on switch change
-              //     });
-              //   },
-              //   activeColor: Colors.green,
-              //   inactiveTrackColor: Colors.red[100],
-              //   inactiveThumbColor: Colors.red,
-              // ),
+
               Switch(
                 value: isOnline,
                 onChanged: (value) {
