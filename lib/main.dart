@@ -53,8 +53,8 @@ class MyApp extends StatelessWidget {
           GetPage(name: '/reachdroppoint', page: () => ReachDropPointScreen()),
           GetPage(name: '/tripcompleted', page: () => TripCompletedScreen()),
           GetPage(name: '/triphistory', page: () => TripHistoryScreen()),
-          //GetPage(name: '/settings', page: () => SettingsScreen()),
-          GetPage(name: '/settings', page: () => CustomerDataPage()),
+          GetPage(name: '/settings', page: () => SettingsScreen()),
+          //GetPage(name: '/settings', page: () => CustomerDataPage()),
         ],
       ),
     );

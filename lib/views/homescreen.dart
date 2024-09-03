@@ -15,14 +15,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isOnline = false;
+  bool isOnline = true;
   String userName = "Loading...";
   double cashCollectedAmount = 104.06;
   AudioPlayer audioPlayer = AudioPlayer();
   Completer<GoogleMapController> _mapController = Completer();
   Position? _currentPosition;
-  LatLng _initialPosition = LatLng(20.5937, 78.9629); // Default to India
+  LatLng? _initialPosition;
   Timer? _locationUpdateTimer;
+  Timer? _autoRefreshTimer;
+  bool isManualRefreshCooldown = false;
+  Timer? _locationCooldownTimer; // Timer for 30 seconds cooldown
 
   @override
   void initState() {
@@ -31,12 +34,18 @@ class _HomeScreenState extends State<HomeScreen> {
     _getCurrentLocation();
     _startLocationUpdates();
     _listenToNewTripRequests();
-    _updateDriverStatus(); // Update driver status in Firestore
+    _updateDriverStatus();
+    // Start auto-refresh if online
+    if (isOnline) {
+      _startAutoRefresh();
+    }
   }
 
   @override
   void dispose() {
     _locationUpdateTimer?.cancel();
+    _autoRefreshTimer?.cancel();
+    _locationCooldownTimer?.cancel(); // Cancel the cooldown timer
     audioPlayer.dispose();
     super.dispose();
   }
@@ -69,15 +78,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
+    if (!isOnline) return; // Exit if offline
+
     bool serviceEnabled;
     LocationPermission permission;
 
+    // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       Get.snackbar('Error', 'Location services are disabled.');
       return;
     }
 
+    // Check for location permissions
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -101,13 +114,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     GoogleMapController mapController = await _mapController.future;
-    mapController.animateCamera(CameraUpdate.newLatLng(_initialPosition));
+    mapController.animateCamera(CameraUpdate.newLatLng(_initialPosition!));
 
     // Update location in Firebase
     _updateLocationInFirebase(position);
+
+    // Start or reset the cooldown timer
+    _startLocationCooldown();
   }
 
-  //*************
   Future<void> _updateLocationInFirebase(Position position) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -149,8 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
-  //*******
   void _showTripData(Map<String, dynamic> tripData) {
     String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
     String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
@@ -203,19 +216,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-
   void _onDriverStatusChange(bool isOnline) {
     setState(() {
       this.isOnline = isOnline;
-      _getCurrentLocation(); // Fetch current location and trigger the update
+      if (isOnline) {
+        _startAutoRefresh();
+        _getCurrentLocation(); // Fetch current location and trigger the update
+      } else {
+        _stopAutoRefresh();
+        _updateDriverStatus();
+      }
     });
   }
 
-
   void _startLocationUpdates() {
-    _locationUpdateTimer = Timer.periodic(Duration(seconds: 10), (Timer t) {
-      _getCurrentLocation();
+    _locationUpdateTimer = Timer.periodic(Duration(seconds: 180), (Timer t) {
+      if (isOnline) {
+        _getCurrentLocation();
+      }
     });
   }
 
@@ -229,57 +247,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showNewTripAlertDialog(Map<String, dynamic> tripData) {
-    Get.defaultDialog(
-      title: "New Trip Alert",
-      titleStyle: TextStyle(
-        fontSize: 22.sp,
-        fontWeight: FontWeight.bold,
-        color: Colors.green,
-      ),
-      content: Column(
-        children: [
-          Icon(
-            Icons.directions_car,
-            color: Colors.green,
-            size: 60.sp,
-          ),
-          SizedBox(height: 10.h),
-          Text(
-            "You have a new trip request.",
-            style: TextStyle(
-              fontSize: 18.sp,
-              color: Colors.black54,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            "Pickup: ${tripData['pickup_place']}",
-            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 10.h),
-          Text(
-            "Drop: ${tripData['drop_place']}",
-            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-      onConfirm: () {
-        audioPlayer.stop(); // Stop the alert sound when "OK" is clicked
-        Get.offNamed('/newtripalert', arguments: tripData);
-      },
-      textConfirm: "OK",
-      confirmTextColor: Colors.white,
-      barrierDismissible: false,
-      buttonColor: Colors.green,
-    );
-  }
-
-
-  //******
   void _listenToNewTripRequests() {
     FirebaseFirestore.instance.collection('trips-from-user').snapshots().listen((snapshot) {
       snapshot.docChanges.forEach((change) {
@@ -290,7 +257,9 @@ class _HomeScreenState extends State<HomeScreen> {
           if (newTrip != null) {
             User? user = FirebaseAuth.instance.currentUser;
             if (user != null) {
-              if (newTrip['driver_id'] == user.uid && newTrip['selected'] == true) {
+              // Check if the driver is online and if the trip is for the current driver
+              if (isOnline && newTrip['driver_id'] == user.uid &&
+                  newTrip['selected'] == true) {
                 _playAlertSound();
                 _showTripData(newTrip);
               }
@@ -301,11 +270,38 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-
   Future<void> _refreshPage() async {
+    if (isManualRefreshCooldown) {
+      Get.snackbar('Cooldown', 'Please wait before refreshing again.');
+      return;
+    }
+
+    setState(() {
+      isManualRefreshCooldown = true;
+    });
+
     _fetchUserName();
     _getCurrentLocation();
     Get.snackbar('Refreshed', 'Page has been refreshed.');
+
+    // Set a timer to enable the refresh button after 30 seconds
+    Timer(Duration(seconds: 30), () {
+      setState(() {
+        isManualRefreshCooldown = false;
+      });
+    });
+  }
+
+  void _startAutoRefresh() {
+    _autoRefreshTimer = Timer.periodic(Duration(seconds: 180), (Timer t) {
+      if (isOnline) {
+        _refreshPage();
+      }
+    });
+  }
+
+  void _stopAutoRefresh() {
+    _autoRefreshTimer?.cancel();
   }
 
   void _updateDriverStatus() async {
@@ -316,8 +312,21 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(user.uid)
           .update({
         'status': isOnline ? 'online' : 'offline',
+        'last_updated': Timestamp.now(),
       });
     }
+  }
+
+  void _startLocationCooldown() {
+    _locationCooldownTimer?.cancel(); // Cancel previous timer if any
+    _locationCooldownTimer = Timer(Duration(seconds: 10), () {
+      setState(() {
+        isManualRefreshCooldown = false;
+      });
+    });
+    setState(() {
+      isManualRefreshCooldown = true;
+    });
   }
 
   Widget _buildIconButton(IconData icon, VoidCallback onPressed, String tooltip) {
@@ -334,10 +343,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize ScreenUtil for responsive design
     return ScreenUtilInit(
-      designSize: Size(375, 812),
-      child:  Scaffold(
+      designSize: const Size(375, 812),
+      child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           automaticallyImplyLeading: false,
@@ -349,12 +357,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 userName.toUpperCase(),
                 style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
-              Spacer(),
+              const Spacer(),
               Text(
                 isOnline ? "Online" : "Offline",
                 style: TextStyle(color: Colors.black45),
               ),
-
               Switch(
                 value: isOnline,
                 onChanged: (value) {
@@ -364,19 +371,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 inactiveTrackColor: Colors.red[100],
                 inactiveThumbColor: Colors.red,
               ),
-
             ],
           ),
         ),
         body: Stack(
           children: [
-            GoogleMap(
+            _initialPosition == null
+                ? const Center(child: CircularProgressIndicator()) // Show a loading indicator
+                : GoogleMap(
               initialCameraPosition: CameraPosition(
-                target: _initialPosition,
+                target: _initialPosition!,
                 zoom: 19.0,
               ),
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
               onMapCreated: (GoogleMapController controller) {
                 _mapController.complete(controller);
               },
@@ -386,30 +395,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: 20,
                 left: 20,
                 right: 20,
-                child: Container(
+                child: SizedBox(
                   width: double.infinity,
                   height: 100.h,
                   child: Lottie.asset('assets/lotties/lottie2.json'),
                 ),
               ),
-            Positioned(
-              top: 20,
-              right: 20,
-              child: _buildIconButton(
-                Icons.refresh,
-                _refreshPage,
-                'Refresh Page',
+            if (isOnline)
+              Positioned(
+                top: 20,
+                right: 20,
+                child: _buildIconButton(
+                  Icons.refresh,
+                      () {
+                    if (!isManualRefreshCooldown) {
+                      _refreshPage();
+                    }
+                  },
+                  'Refresh Page',
+                ),
               ),
-            ),
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: _buildIconButton(
-                Icons.my_location,
-                _getCurrentLocation,
-                'Find My Location',
+            if (isOnline)
+              Positioned(
+                bottom: 20,
+                right: 20,
+                child: _buildIconButton(
+                  Icons.my_location,
+                      () {
+                    if (!isManualRefreshCooldown) {
+                      _getCurrentLocation();
+                    } else {
+                      Get.snackbar('Cooldown', 'Please wait before fetching location again.');
+                    }
+                  },
+                  'Find My Location',
+                ),
               ),
-            ),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
@@ -419,21 +440,21 @@ class _HomeScreenState extends State<HomeScreen> {
           items: [
             BottomNavigationBarItem(
               icon: IconButton(
-                icon: Icon(Icons.home),
+                icon: const Icon(Icons.home),
                 onPressed: () => Get.toNamed('/homescreen'),
               ),
               label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: IconButton(
-                icon: Icon(Icons.menu),
+                icon: const Icon(Icons.menu),
                 onPressed: () => Get.toNamed('/triphistory'),
               ),
               label: 'History',
             ),
             BottomNavigationBarItem(
               icon: IconButton(
-                icon: Icon(Icons.settings),
+                icon: const Icon(Icons.settings),
                 onPressed: () => Get.toNamed('/settings'),
               ),
               label: 'Settings',
