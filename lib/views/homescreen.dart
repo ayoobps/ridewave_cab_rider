@@ -163,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
       Get.snackbar('Error', 'Failed to update location.');
     }
   }
-
   void _showTripData(Map<String, dynamic> tripData) {
     String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
     String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
@@ -207,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       onConfirm: () {
         audioPlayer.stop(); // Stop the alert sound when "OK" is clicked
-        Get.offNamed('/newtripalert', arguments: tripData);
+        Get.offNamed('/tripconfirm', arguments: tripData); // Navigate to TripConfirm page with tripData
       },
       textConfirm: "OK",
       confirmTextColor: Colors.white,
@@ -248,28 +247,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _listenToNewTripRequests() {
-    FirebaseFirestore.instance.collection('trips-from-user').snapshots().listen((snapshot) {
-      snapshot.docChanges.forEach((change) {
-        if (change.type == DocumentChangeType.added) {
+    FirebaseFirestore.instance
+        .collection('trips-from-user')
+        .where('driver_id', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added || change.type == DocumentChangeType.modified) {
           var newTrip = change.doc.data() as Map<String, dynamic>?;
-          print('New Trip Data: $newTrip'); // Log the new trip data
 
           if (newTrip != null) {
             User? user = FirebaseAuth.instance.currentUser;
-            if (user != null) {
-              // Check if the driver is online and if the trip is for the current driver
-              if (isOnline && newTrip['driver_id'] == user.uid &&
-                  newTrip['selected'] == true) {
+
+            if (user != null && newTrip['trip-status'] != 'confirmed') {
+              // Show the trip alert if the trip is not confirmed
+              if (isOnline && newTrip['driver_id'] == user.uid && newTrip['selected'] == true) {
                 _playAlertSound();
                 _showTripData(newTrip);
               }
             }
           }
         }
-      });
+      }
     });
   }
-
   Future<void> _refreshPage() async {
     if (isManualRefreshCooldown) {
       Get.snackbar('Cooldown', 'Please wait before refreshing again.');
