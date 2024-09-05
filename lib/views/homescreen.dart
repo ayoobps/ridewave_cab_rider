@@ -17,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool isOnline = true;
   String userName = "Loading...";
-  double cashCollectedAmount = 104.06;
   AudioPlayer audioPlayer = AudioPlayer();
   Completer<GoogleMapController> _mapController = Completer();
   Position? _currentPosition;
@@ -25,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _locationUpdateTimer;
   Timer? _autoRefreshTimer;
   bool isManualRefreshCooldown = false;
-  Timer? _locationCooldownTimer; // Timer for 30 seconds cooldown
+  Timer? _locationCooldownTimer;
 
   @override
   void initState() {
@@ -33,9 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUserName();
     _getCurrentLocation();
     _startLocationUpdates();
-    _listenToNewTripRequests();
+    _listenToTripRequests(); // Listen for trip requests with status "driver_assigned"
     _updateDriverStatus();
-    // Start auto-refresh if online
     if (isOnline) {
       _startAutoRefresh();
     }
@@ -45,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _locationUpdateTimer?.cancel();
     _autoRefreshTimer?.cancel();
-    _locationCooldownTimer?.cancel(); // Cancel the cooldown timer
+    _locationCooldownTimer?.cancel();
     audioPlayer.dispose();
     super.dispose();
   }
@@ -58,7 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
             .collection('driver_data')
             .doc(user.uid)
             .get();
-
         if (userDoc.exists) {
           setState(() {
             userName = userDoc['name'];
@@ -78,19 +75,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    if (!isOnline) return; // Exit if offline
+    if (!isOnline) return;
 
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       Get.snackbar('Error', 'Location services are disabled.');
       return;
     }
 
-    // Check for location permissions
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -116,10 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     GoogleMapController mapController = await _mapController.future;
     mapController.animateCamera(CameraUpdate.newLatLng(_initialPosition!));
 
-    // Update location in Firebase
     _updateLocationInFirebase(position);
-
-    // Start or reset the cooldown timer
     _startLocationCooldown();
   }
 
@@ -127,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Update the driver's location and status in the driver_data collection
         await FirebaseFirestore.instance
             .collection('driver_data')
             .doc(user.uid)
@@ -136,32 +127,32 @@ class _HomeScreenState extends State<HomeScreen> {
           'last_updated': Timestamp.now(),
           'status': isOnline ? 'online' : 'offline',
         });
-
-        // Check if the current driver is selected in the trip-from-user collection
-        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-            .collection('trip-from-user')
-            .where('driver_id', isEqualTo: user.uid)
-            .where('selected', isEqualTo: true)
-            .get();
-
-        if (querySnapshot.docs.isNotEmpty) {
-          // Assuming there might be multiple trips but we only care about the current one
-          for (var doc in querySnapshot.docs) {
-            var tripData = doc.data() as Map<String, dynamic>?;
-
-            if (tripData != null) {
-              _showTripData(tripData); // Show trip data if the current driver is selected
-              break; // Show alert for the first matching trip and exit the loop
-            }
-          }
-        } else {
-          print("No active trips for the current driver.");
-        }
       }
     } catch (e) {
-      print("Failed to update location in Firebase: $e");
       Get.snackbar('Error', 'Failed to update location.');
     }
+  }
+
+  void _listenToTripRequests() {
+    FirebaseFirestore.instance
+        .collection('trip-request')
+        .where('driver_id', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+        .where('trip_status', isEqualTo: 'driver_assigned')
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        var tripData = change.doc.data() as Map<String, dynamic>?;
+
+        // Ensure the driver is online before proceeding with the trip alert
+        if (isOnline && tripData != null) {
+          // Check if the trip status is 'driver_assigned'
+          if (change.type == DocumentChangeType.added || change.type == DocumentChangeType.modified) {
+            _playAlertSound();
+            _showTripData(tripData);
+          }
+        }
+      }
+    });
   }
   void _showTripData(Map<String, dynamic> tripData) {
     String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
@@ -183,15 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 10.h),
           Text(
-            "You have a new trip request.",
-            style: TextStyle(
-              fontSize: 18.sp,
-              color: Colors.black54,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 20.h),
-          Text(
             "Pickup: $pickupPlace",
             style: TextStyle(fontSize: 16.sp, color: Colors.black54),
             textAlign: TextAlign.center,
@@ -205,8 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       onConfirm: () {
-        audioPlayer.stop(); // Stop the alert sound when "OK" is clicked
-        Get.offNamed('/tripconfirm', arguments: tripData); // Navigate to TripConfirm page with tripData
+        audioPlayer.stop();
+        Get.offNamed('/tripconfirm', arguments: tripData); // Navigate to confirmation screen
       },
       textConfirm: "OK",
       confirmTextColor: Colors.white,
@@ -215,18 +197,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _playAlertSound() async {
+    try {
+      await audioPlayer.setVolume(1.0);
+      await audioPlayer.setReleaseMode(ReleaseMode.loop);
+      await audioPlayer.play(AssetSource('sounds/alert.mp3'));
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to play alert sound.');
+    }
+  }
+
   void _onDriverStatusChange(bool isOnline) {
     setState(() {
       this.isOnline = isOnline;
       if (isOnline) {
         _startAutoRefresh();
-        _getCurrentLocation(); // Fetch current location and trigger the update
+        _getCurrentLocation();
+        _listenToTripRequests(); // Ensure listening to trip requests only when online
       } else {
         _stopAutoRefresh();
         _updateDriverStatus();
+        audioPlayer.stop(); // Stop alert sound if offline
       }
     });
   }
+
 
   void _startLocationUpdates() {
     _locationUpdateTimer = Timer.periodic(Duration(seconds: 180), (Timer t) {
@@ -236,41 +231,18 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _playAlertSound() async {
-    try {
-      await audioPlayer.setVolume(1.0);
-      await audioPlayer.setReleaseMode(ReleaseMode.loop); // Loop the sound
-      await audioPlayer.play(AssetSource('sounds/alert.mp3'));
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to play alert sound.');
-    }
-  }
-
-  void _listenToNewTripRequests() {
-    FirebaseFirestore.instance
-        .collection('trips-from-user')
-        .where('driver_id', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-        .snapshots()
-        .listen((snapshot) {
-      for (var change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added || change.type == DocumentChangeType.modified) {
-          var newTrip = change.doc.data() as Map<String, dynamic>?;
-
-          if (newTrip != null) {
-            User? user = FirebaseAuth.instance.currentUser;
-
-            if (user != null && newTrip['trip-status'] != 'confirmed') {
-              // Show the trip alert if the trip is not confirmed
-              if (isOnline && newTrip['driver_id'] == user.uid && newTrip['selected'] == true) {
-                _playAlertSound();
-                _showTripData(newTrip);
-              }
-            }
-          }
-        }
+  void _startAutoRefresh() {
+    _autoRefreshTimer = Timer.periodic(Duration(seconds: 180), (Timer t) {
+      if (isOnline) {
+        _refreshPage();
       }
     });
   }
+
+  void _stopAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+  }
+
   Future<void> _refreshPage() async {
     if (isManualRefreshCooldown) {
       Get.snackbar('Cooldown', 'Please wait before refreshing again.');
@@ -285,24 +257,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _getCurrentLocation();
     Get.snackbar('Refreshed', 'Page has been refreshed.');
 
-    // Set a timer to enable the refresh button after 30 seconds
     Timer(Duration(seconds: 30), () {
       setState(() {
         isManualRefreshCooldown = false;
       });
     });
-  }
-
-  void _startAutoRefresh() {
-    _autoRefreshTimer = Timer.periodic(Duration(seconds: 180), (Timer t) {
-      if (isOnline) {
-        _refreshPage();
-      }
-    });
-  }
-
-  void _stopAutoRefresh() {
-    _autoRefreshTimer?.cancel();
   }
 
   void _updateDriverStatus() async {
@@ -319,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _startLocationCooldown() {
-    _locationCooldownTimer?.cancel(); // Cancel previous timer if any
+    _locationCooldownTimer?.cancel();
     _locationCooldownTimer = Timer(Duration(seconds: 10), () {
       setState(() {
         isManualRefreshCooldown = false;
@@ -378,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
         body: Stack(
           children: [
             _initialPosition == null
-                ? const Center(child: CircularProgressIndicator()) // Show a loading indicator
+                ? const Center(child: CircularProgressIndicator())
                 : GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: _initialPosition!,
@@ -391,17 +350,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 _mapController.complete(controller);
               },
             ),
-            if (isOnline)
-              Positioned(
-                top: 20,
-                left: 20,
-                right: 20,
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 100.h,
-                  child: Lottie.asset('assets/lotties/lottie2.json'),
-                ),
-              ),
             if (isOnline)
               Positioned(
                 top: 20,
@@ -432,34 +380,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Find My Location',
                 ),
               ),
-          ],
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: Colors.green[50],
-          selectedItemColor: Colors.green,
-          unselectedItemColor: Colors.black54,
-          items: [
-            BottomNavigationBarItem(
-              icon: IconButton(
-                icon: const Icon(Icons.home),
-                onPressed: () => Get.toNamed('/homescreen'),
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () => Get.toNamed('/triphistory'),
-              ),
-              label: 'History',
-            ),
-            BottomNavigationBarItem(
-              icon: IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () => Get.toNamed('/settings'),
-              ),
-              label: 'Settings',
-            ),
           ],
         ),
       ),
