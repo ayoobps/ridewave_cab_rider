@@ -9,6 +9,7 @@ import 'package:ridewave_cab_rider/views/go_pickup_point_screen.dart';
 import 'package:ridewave_cab_rider/views/homescreen.dart';
 import 'package:ridewave_cab_rider/views/login_screen.dart';
 import 'package:ridewave_cab_rider/views/new_trip_alert_screen.dart';
+
 import 'package:ridewave_cab_rider/views/otp_verification_screen.dart';
 import 'package:ridewave_cab_rider/views/profile_screen.dart';
 import 'package:ridewave_cab_rider/views/reach_drop_point_screen.dart';
@@ -65,3 +66,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+

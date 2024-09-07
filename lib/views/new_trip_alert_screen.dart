@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NewTripAlertScreen extends StatefulWidget {
   @override
   _NewTripAlertScreenState createState() => _NewTripAlertScreenState();
 }
+
+final Map<String, dynamic> tripData = Get.arguments;
+
+String tripId = tripData['trip_id'];
+String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
+String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
+String driverId = tripData['driver_id'];
+String tripCode = tripData['trip_code'];
+//double totalFare = tripData['fare'];
+//double distanceKm = tripData['distance'];
+
+// Get the passed trip data
+
 
 class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
   bool isOnline = true;
@@ -32,6 +46,43 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
     }
   }
 
+  // Function to confirm the trip and update Firestore
+  Future<void> _confirmTripAndUpdateStatus(
+      String tripId, String driverId, Map<String, dynamic> tripData) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // Save the trip details to the 'confirmed-trip' collection
+      await firestore.collection('confirmed-trip').doc(tripId).set({
+        'trip_id': tripId,
+        'trip_code': tripCode,
+        'pickup_place': tripData['pickup_place'],
+        'drop_place': tripData['drop_place'],
+        'driver_id': driverId,
+        //'fare' : totalFare,
+        //'distance' : distanceKm,
+        'confirmed_at': Timestamp.now(),
+      });
+
+      // Update the 'trip_status' in the 'trip-request' collection to 'accepted'
+      await firestore.collection('trip-request').doc(tripId).update({
+        'trip_status': 'accepted',
+        'accepted_at': Timestamp.now(),
+      });
+
+      // Show a snackbar to notify the user of the successful update
+      Get.snackbar('Success', 'Trip has been accepted successfully!',
+          backgroundColor: Colors.green[100], colorText: Colors.green);
+
+      // Navigate to the GoPickupPoint screen after accepting the trip
+      Get.offNamedUntil(
+          '/gopickuppoint', (Route<dynamic> route) => route.isFirst);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to confirm the trip: $e',
+          backgroundColor: Colors.red[100], colorText: Colors.red);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -47,7 +98,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
               Text(
                 "New Trip Alert",
                 style:
-                    TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
               Spacer(),
               Text(
@@ -73,7 +124,6 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   SizedBox(height: 20.h),
-
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -90,7 +140,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "#0000 0015",
+                          "$tripCode",
                           style: TextStyle(
                             color: Colors.green,
                             fontSize: 20,
@@ -110,7 +160,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "G6G6+PCG, Naikkanal, Thrissur, Kerala, India",
+                                "$pickupPlace",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
@@ -118,32 +168,18 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                         ),
                         Divider(),
                         Text(
-                          "CUSTOMER DETAILS",
+                          "Drop Location",
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.person, color: Colors.black54),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Areefa Sali",
-                                style: TextStyle(color: Colors.black54),
-                              ),
-                            ),
-                            Icon(Icons.phone, color: Colors.green),
-                          ],
-                        ),
-                        SizedBox(height: 4.h),
-                        Row(
-                          children: [
                             Icon(Icons.location_pin, color: Colors.black54),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "Puzhangara Illath Palace, S.N.Nagar, Vadookara.P.O, Thrissur",
+                                "$dropPlace",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
@@ -176,11 +212,8 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                                         ),
                                       ),
                                       ElevatedButton(
-                                        onPressed: () {
-                                          Get.offNamedUntil(
-                                              '/gopickuppoint',
-                                              (Route<dynamic> route) =>
-                                                  route.isFirst);
+                                        onPressed: () async {
+                                          await _confirmTripAndUpdateStatus(tripId, driverId, tripData);
                                         },
                                         child: Text(
                                           "Yes",
@@ -203,7 +236,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                             child: Text(
                               "ACCEPT TRIP",
                               style:
-                                  TextStyle(color: Colors.white, fontSize: 16),
+                              TextStyle(color: Colors.white, fontSize: 16),
                             ),
                           ),
                         ),
@@ -237,8 +270,8 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                                         onPressed: () {
                                           Get.offNamedUntil(
                                               '/homescreen',
-                                              (Route<dynamic> route) =>
-                                                  route.isFirst);
+                                                  (Route<dynamic> route) =>
+                                              route.isFirst);
                                         },
                                         child: Text(
                                           "Yes",
@@ -261,7 +294,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                             child: Text(
                               "TRANSFER TRIP",
                               style:
-                                  TextStyle(color: Colors.white, fontSize: 16),
+                              TextStyle(color: Colors.white, fontSize: 16),
                             ),
                           ),
                         ),
@@ -273,7 +306,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                                 : "PAYMENT TYPE : CASH",
                             style: TextStyle(
                               color:
-                                  isPaymentOnline ? Colors.green : Colors.red,
+                              isPaymentOnline ? Colors.green : Colors.red,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -295,7 +328,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                             "Trip Earning - ₹66.10\nTip - ₹0.00\nSurge - ₹14.00",
                             textAlign: TextAlign.center,
                             style:
-                                TextStyle(color: Colors.black54, fontSize: 14),
+                            TextStyle(color: Colors.black54, fontSize: 14),
                           ),
                         ),
                         SizedBox(height: 8),
@@ -303,7 +336,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                           child: Text(
                             "Distance - 2.6 km",
                             style:
-                                TextStyle(color: Colors.black54, fontSize: 16),
+                            TextStyle(color: Colors.black54, fontSize: 16),
                           ),
                         ),
                       ],
@@ -337,4 +370,5 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
       ),
     );
   }
+
 }

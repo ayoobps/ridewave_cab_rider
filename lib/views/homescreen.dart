@@ -155,8 +155,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
   void _showTripData(Map<String, dynamic> tripData) {
-    String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
-    String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
+    //String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
+    //String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
+    String totalFare = tripData['fare'] ?? 'Unknown drop location';
+    double distanceKm = tripData['distance'] ?? 'Unknown drop location';
+
+
 
     Get.defaultDialog(
       title: "New Trip Alert",
@@ -174,13 +178,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 10.h),
           Text(
-            "Pickup: $pickupPlace",
-            style: TextStyle(fontSize: 16.sp, color: Colors.black54),
+            "\u20B9$totalFare",
+            style: TextStyle(fontSize: 30.sp, fontWeight: FontWeight.bold, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 10.h),
           Text(
-            "Drop: $dropPlace",
+            "$distanceKm KM",
             style: TextStyle(fontSize: 16.sp, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
@@ -188,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       onConfirm: () {
         audioPlayer.stop();
-        Get.offNamed('/tripconfirm', arguments: tripData); // Navigate to confirmation screen
+        Get.offNamed('/newtripalert', arguments: tripData); // Navigate to confirmation screen
       },
       textConfirm: "OK",
       confirmTextColor: Colors.white,

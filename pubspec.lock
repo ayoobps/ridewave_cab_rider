@@ -50,7 +50,7 @@ packages:
     source: hosted
     version: "5.0.0"
   audioplayers_darwin:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: audioplayers_darwin
       sha256: e507887f3ff18d8e5a10a668d7bedc28206b12e10b98347797257c6ae1019c3b
@@ -449,7 +449,7 @@ packages:
     source: hosted
     version: "2.14.4"
   google_maps_flutter_ios:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: google_maps_flutter_ios
       sha256: "3a484846fc56f15e47e3de1f5ea80a7ff2b31721d2faa88f390f3b3cf580c953"
