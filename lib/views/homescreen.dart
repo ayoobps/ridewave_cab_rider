@@ -386,6 +386,35 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: Colors.green[50],
+          currentIndex: 0,
+          selectedItemColor: Colors.green,
+          unselectedItemColor: Colors.black54,
+          items: [
+            BottomNavigationBarItem(
+              icon: IconButton(
+                icon: Icon(Icons.home),
+                onPressed: () => Get.toNamed('/homescreen'),
+              ),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: IconButton(
+                icon: Icon(Icons.menu),
+                onPressed: () => Get.toNamed('/triphistory'),
+              ),
+              label: 'History',
+            ),
+            BottomNavigationBarItem(
+              icon: IconButton(
+                icon: Icon(Icons.settings),
+                onPressed: () => Get.toNamed('/settings'),
+              ),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

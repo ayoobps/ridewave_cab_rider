@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:ridewave_cab_rider/views/new_trip_alert_screen.dart';
+import 'homescreen.dart';
 
 
 
@@ -14,7 +16,6 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   bool isOnline = true;
   bool isCashCollected = false; // Track if cash is collected
   bool isPaymentOnline = false; // Track if the payment is online
-  double cashCollectedAmount = 104.06; // Track the amount of cash collected
 
   @override
   void initState() {
@@ -25,7 +26,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
   void _updatePaymentStatus() {
     setState(() {
-      isPaymentOnline = cashCollectedAmount == 0;
+      isPaymentOnline = totalFare == 0;
     });
   }
 
