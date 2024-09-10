@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
     //String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
     //String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
     String totalFare = tripData['fare'] ?? 'Unknown drop location';
-    double distanceKm = tripData['distance'] ?? 'Unknown drop location';
+    String distanceKm = tripData['distance'] ?? 'Unknown drop location';
 
 
 
@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 10.h),
           Text(
-            "$distanceKm KM",
+            "Distance $distanceKm KM",
             style: TextStyle(fontSize: 16.sp, color: Colors.black54),
             textAlign: TextAlign.center,
           ),

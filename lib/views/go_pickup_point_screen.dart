@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'new_trip_alert_screen.dart';
 
 class GoPickupPointScreen extends StatefulWidget {
   @override
@@ -11,20 +15,25 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
   bool isOnline = true;
   bool isCashCollected = false;
   bool isPaymentOnline = false;
-  double cashCollectedAmount = 104.06;
+  String cashCollectedAmount = totalFare;
 
-  void _updatePaymentStatus() {
-    setState(() {
-      isPaymentOnline = cashCollectedAmount == 0;
-    });
+  // Open Google Maps for navigation
+  void _openMap(double lat, double lng) async {
+    final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not open the map.';
+    }
   }
 
+  // Toggle the driver's online status
   void _toggleOnlineStatus(bool value) {
     if (!value) {
-      // If the user tries to switch to offline, prevent the switch
+      // Prevent going offline during an active trip
       Get.snackbar('Warning', 'Current trip must be completed to go offline.',
           backgroundColor: Colors.red[100], colorText: Colors.red);
-      return; // Do nothing, the switch won't change
+      return;
     } else {
       setState(() {
         isOnline = value;
@@ -32,10 +41,52 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
     }
   }
 
+  // Function to confirm the trip and update Firestore
+  Future<void> _confirmReachPickupStatus(
+      String tripId, String driverId, Map<String, dynamic> tripData) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // Save the trip details to the 'confirmed-trip' collection
+      await firestore.collection('confirmed-trip').doc(tripId).set({
+        'trip_id': tripId,
+        'trip_code': tripCode,
+        'pickup_place': tripData['pickup_place'],
+        'drop_place': tripData['drop_place'],
+        'driver_id': driverId,
+        'fare': totalFare,
+        'distance': distanceKm,
+        'user_id': customerId,
+        'confirmed_at': Timestamp.now(),
+      });
+
+      // Update the 'trip_status' in the 'trip-request' collection to 'reachpickup'
+      await firestore.collection('trip-request').doc(tripId).update({
+        'trip_status': 'reachpickup',
+        'accepted_at': Timestamp.now(),
+      });
+
+      // Show a snackbar to notify the user of the successful update
+      Get.snackbar('Success', 'You have reached the pickup point!',
+          backgroundColor: Colors.green[100], colorText: Colors.green);
+
+      // Navigate to the Reach Pickup Point screen
+      Get.offNamedUntil('/reachpickuppoint', (Route<dynamic> route) => route.isFirst);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to confirm: $e',
+          backgroundColor: Colors.red[100], colorText: Colors.red);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false, // Prevent back navigation
+    return WillPopScope(
+      onWillPop: () async => false, // Prevent back navigation
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -73,7 +124,9 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                 children: [
                   SizedBox(height: 10.h),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Implement navigation to the pickup point using GPS if needed
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -103,7 +156,7 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "#0000 0015",
+                          "$tripCode",
                           style: TextStyle(
                             color: Colors.green,
                             fontSize: 20,
@@ -122,12 +175,17 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "G6G6+PCG, Naikkanal, Thrissur, Kerala, India",
+                                "$pickupPlace",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
                             SizedBox(width: 8),
-                            Icon(Icons.navigation, color: Colors.green),
+                            GestureDetector(
+                              onTap: () {
+                                _openMap(pickupLat, pickupLng);
+                              },
+                              child: Icon(Icons.navigation, color: Colors.green),
+                            ),
                           ],
                         ),
                         Divider(),
@@ -141,24 +199,27 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                             Icon(Icons.person, color: Colors.black54),
                             SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                "Areefa Sali",
-                                style: TextStyle(color: Colors.black54),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "$userName",
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                  Text(
+                                    "$userEmail",
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                ],
                               ),
                             ),
-                            Icon(Icons.phone, color: Colors.green),
-                          ],
-                        ),
-                        SizedBox(height: 4.h),
-                        Row(
-                          children: [
-                            Icon(Icons.location_pin, color: Colors.black54),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Puzhangara Illath Palace, S.N.Nagar, Vadookara.P.O, Thrissur",
-                                style: TextStyle(color: Colors.black54),
-                              ),
+                            GestureDetector(
+                              onTap: () {
+                                if (userPhone != null) {
+                                  launch("tel:$userPhone");
+                                }
+                              },
+                              child: Icon(Icons.phone, color: Colors.green),
                             ),
                           ],
                         ),
@@ -171,11 +232,8 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                                 builder: (context) {
                                   return AlertDialog(
                                     title: Text(
-                                      'You have reached the pickup location?',
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 20,
-                                      ),
+                                      'Have you reached the pickup location?',
+                                      style: TextStyle(color: Colors.green, fontSize: 20),
                                     ),
                                     backgroundColor: Colors.green[50],
                                     actions: [
@@ -189,17 +247,16 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                                         ),
                                       ),
                                       ElevatedButton(
-                                        onPressed: () {
+                                        onPressed: () async {
+                                          await _confirmReachPickupStatus(tripId, driverId, tripData);
                                           Get.offNamedUntil(
-                                            '/reachpickuppoint',
-                                                (Route<dynamic> route) => route.isFirst,
-                                          );
+                                              '/reachpickuppoint', (Route<dynamic> route) => route.isFirst);
                                         },
                                         child: Text(
                                           "Yes",
                                           style: TextStyle(color: Colors.green),
                                         ),
-                                      )
+                                      ),
                                     ],
                                   );
                                 },
@@ -210,8 +267,7 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 60, vertical: 12),
+                              padding: EdgeInsets.symmetric(horizontal: 60, vertical: 12),
                             ),
                             child: Text(
                               "REACH PICKUP POINT",
@@ -222,36 +278,16 @@ class _GoPickupPointScreenState extends State<GoPickupPointScreen> {
                         SizedBox(height: 20),
                         Center(
                           child: Text(
-                            isPaymentOnline ? "PAYMENT TYPE : ONLINE" : "PAYMENT TYPE : CASH",
+                            "\u{20B9}${cashCollectedAmount}",
                             style: TextStyle(
-                              color: isPaymentOnline ? Colors.green : Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                                color: Colors.green, fontWeight: FontWeight.bold, fontSize: 24),
                           ),
                         ),
+                        SizedBox(height: 8),
                         SizedBox(height: 20),
                         Center(
                           child: Text(
-                            "\u{20B9}${cashCollectedAmount}",
-                            style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24),
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            "Trip Earning - ₹66.10\nTip - ₹0.00\nSurge - ₹14.00",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.black54, fontSize: 14),
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            "Distance - 2.6 km",
+                            "Distance - $distanceKm KM",
                             style: TextStyle(color: Colors.black54, fontSize: 16),
                           ),
                         ),

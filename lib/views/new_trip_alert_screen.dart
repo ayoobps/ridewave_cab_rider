@@ -15,8 +15,18 @@ String pickupPlace = tripData['pickup_place'] ?? 'Unknown pickup location';
 String dropPlace = tripData['drop_place'] ?? 'Unknown drop location';
 String driverId = tripData['driver_id'];
 String tripCode = tripData['trip_code'];
-//double totalFare = tripData['fare'];
-//double distanceKm = tripData['distance'];
+String totalFare = tripData['fare'];
+String distanceKm = tripData['distance'];
+String customerId = tripData['user_id'];
+String userName = tripData['name'];
+String userPhone = tripData['phone_number'];
+String userEmail = tripData['email'];
+double pickupLat = tripData['pickup_lat'];
+double pickupLng = tripData['pickup_lng'];
+double dropLat = tripData['drop_lat'];
+double dropLng = tripData['drop_lng'];
+String tripPin = tripData['trip_pin'];
+
 
 // Get the passed trip data
 
@@ -25,7 +35,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
   bool isOnline = true;
   bool isCashCollected = false;
   bool isPaymentOnline = false;
-  double cashCollectedAmount = 104.06;
+  String cashCollectedAmount = totalFare;
 
   void _updatePaymentStatus() {
     setState(() {
@@ -59,8 +69,9 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
         'pickup_place': tripData['pickup_place'],
         'drop_place': tripData['drop_place'],
         'driver_id': driverId,
-        //'fare' : totalFare,
-        //'distance' : distanceKm,
+        'fare' : totalFare,
+        'distance' : distanceKm,
+        'user_id' : customerId,
         'confirmed_at': Timestamp.now(),
       });
 
@@ -168,7 +179,7 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                         ),
                         Divider(),
                         Text(
-                          "Drop Location",
+                          "DROP LOCATION",
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14),
                         ),
@@ -323,18 +334,18 @@ class _NewTripAlertScreenState extends State<NewTripAlertScreen> {
                           ),
                         ),
                         SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            "Trip Earning - ₹66.10\nTip - ₹0.00\nSurge - ₹14.00",
-                            textAlign: TextAlign.center,
-                            style:
-                            TextStyle(color: Colors.black54, fontSize: 14),
-                          ),
-                        ),
+                        // Center(
+                        //   child: Text(
+                        //     "Trip Earning - ₹66.10\nTip - ₹0.00\nSurge - ₹14.00",
+                        //     textAlign: TextAlign.center,
+                        //     style:
+                        //     TextStyle(color: Colors.black54, fontSize: 14),
+                        //   ),
+                        // ),
                         SizedBox(height: 8),
                         Center(
                           child: Text(
-                            "Distance - 2.6 km",
+                            "Distance - $distanceKm KM",
                             style:
                             TextStyle(color: Colors.black54, fontSize: 16),
                           ),

@@ -1,8 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
+import 'package:ridewave_cab_rider/views/new_trip_alert_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GoDropPointScreen extends StatefulWidget {
   @override
@@ -13,11 +16,60 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
   bool isOnline = true;
   bool isCashCollected = false; // Track if cash is collected
   bool isPaymentOnline = false; // Track if the payment is online
-  double cashCollectedAmount = 104.06; // Track the amount of cash collected
+
+
+  // Open Google Maps for navigation
+  void _openMap(double lat, double lng) async {
+    final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not open the map.';
+    }
+  }
+
+
+  // Function to confirm the trip and update Firestore
+  Future<void> _confirmReachDropStatus(
+      String tripId, String driverId, Map<String, dynamic> tripData) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // Save the trip details to the 'confirmed-trip' collection
+      await firestore.collection('confirmed-trip').doc(tripId).set({
+        'trip_id': tripId,
+        'trip_code': tripCode,
+        'pickup_place': tripData['pickup_place'],
+        'drop_place': tripData['drop_place'],
+        'driver_id': driverId,
+        'fare': totalFare,
+        'distance': distanceKm,
+        'user_id': customerId,
+        'confirmed_at': Timestamp.now(),
+      });
+
+      // Update the 'trip_status' in the 'trip-request' collection to 'reachpickup'
+      await firestore.collection('trip-request').doc(tripId).update({
+        'trip_status': 'reachdrop',
+        'accepted_at': Timestamp.now(),
+      });
+
+      // Show a snackbar to notify the user of the successful update
+      Get.snackbar('Success', 'You have reached the drop point!',
+          backgroundColor: Colors.green[100], colorText: Colors.green);
+
+      // Navigate to the Reach Pickup Point screen
+      Get.offNamedUntil('/reachdroppoint', (Route<dynamic> route) => route.isFirst);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to confirm: $e',
+          backgroundColor: Colors.red[100], colorText: Colors.red);
+    }
+  }
+
 
   void _updatePaymentStatus() {
     setState(() {
-      isPaymentOnline = cashCollectedAmount == 0;
+      isPaymentOnline = totalFare == 0;
     });
   }
 
@@ -113,7 +165,7 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "#0000 0015",
+                          "$tripCode",
                           style: TextStyle(
                             color: Colors.green,
                             fontSize: 20,
@@ -133,7 +185,7 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "G6G6+PCG, Naikkanal, Thrissur, Kerala, India",
+                                "$pickupPlace",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
@@ -154,11 +206,18 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "Areefa Sali",
+                                "$userName",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
-                            Icon(Icons.phone, color: Colors.green),
+                            GestureDetector(
+                              onTap: () {
+                                if (userPhone != null) {
+                                  launch("tel:$userPhone");
+                                }
+                              },
+                              child: Icon(Icons.phone, color: Colors.green),
+                            ),
                           ],
                         ),
                         SizedBox(height: 4.h),
@@ -168,7 +227,7 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "Puzhangara Illath Palace, S.N.Nagar, Vadookara.P.O, Thrissur",
+                                "$userEmail",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
@@ -202,16 +261,16 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                                         ),
                                       ),
                                       ElevatedButton(
-                                          onPressed: () {
-                                            Get.offNamedUntil(
-                                                '/reachdroppoint',
-                                                (Route<dynamic> route) =>
-                                                    route.isFirst);
-                                          },
-                                          child: Text(
-                                            "Yes",
-                                            style: TextStyle(color: Colors.green),
-                                          ))
+                                        onPressed: () async {
+                                          await _confirmReachDropStatus(tripId, driverId, tripData);
+                                          Get.offNamedUntil(
+                                              '/reachdroppoint', (Route<dynamic> route) => route.isFirst);
+                                        },
+                                        child: Text(
+                                          "Yes",
+                                          style: TextStyle(color: Colors.green),
+                                        ),
+                                      ),
                                     ],
                                   );
                                 },
@@ -257,19 +316,24 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "G6G6+PCG, Naikkanal, Thrissur, Kerala, India",
+                                "$dropPlace",
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
                             SizedBox(width: 8),
-                            Icon(Icons.navigation, color: Colors.green),
+                            GestureDetector(
+                              onTap: () {
+                                _openMap(dropLat, dropLng);
+                              },
+                              child: Icon(Icons.navigation, color: Colors.green),
+                            ),
                           ],
                         ),
                         Divider(),
                         SizedBox(height: 20),
                         Center(
                           child: Text(
-                            "\u{20B9}${cashCollectedAmount}",
+                            "\u{20B9}$totalFare",
                             style: TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
@@ -277,18 +341,12 @@ class _GoDropPointScreenState extends State<GoDropPointScreen> {
                           ),
                         ),
                         SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            "Trip Earning - ₹66.10\nTip - ₹0.00\nSurge - ₹14.00",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.black54, fontSize: 14),
-                          ),
-                        ),
                         SizedBox(height: 8),
                         Center(
                           child: Text(
-                            "Distance - 2.6 km",
-                            style: TextStyle(color: Colors.black54, fontSize: 16),
+                            "Distance - $distanceKm KM",
+                            style:
+                            TextStyle(color: Colors.black54, fontSize: 16),
                           ),
                         ),
                       ],
